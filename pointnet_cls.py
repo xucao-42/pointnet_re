@@ -3,10 +3,10 @@ from ops import *
 
 
 def get_input_placeholders(batch_size, num_point, num_feature):
-    pts_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, num_feature))
-    labels_pl = tf.placeholder(tf.int32, shape=(batch_size,))
-    is_training_pl = tf.placeholder(tf.bool, shape=())
-    keepprob_pl = tf.placeholder(tf.float32, shape=())
+    pts_pl = tf.placeholder(tf.float32, shape=(batch_size, num_point, num_feature), name="point_clouds")
+    labels_pl = tf.placeholder(tf.int32, shape=(batch_size,), name="labels")
+    is_training_pl = tf.placeholder(tf.bool, shape=(), name="phase")
+    keepprob_pl = tf.placeholder(tf.float32, shape=(), name="keep_prob")
     return pts_pl, labels_pl, is_training_pl, keepprob_pl
 
 

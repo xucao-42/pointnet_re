@@ -2,7 +2,7 @@ import socket, os, configparser, time, shutil
 from pointnet_cls import *
 import provider
 import tensorflow as tf
-
+np.random.seed(42)
 # download modelnet40
 HOSTNAME = socket.gethostname()
 DATA_DIR = "./data"
@@ -65,11 +65,11 @@ def train(train_save_dir, log_file):
     tf.summary.scalar('learning_rate', learning_rate)
 
     pts_pl, labels_pl, is_training_pl, keepprob_pl = get_input_placeholders(BATCH_SIZE, NUM_POINT, 3)
-    logits, transform_matrices = get_model(pts_pl, keepprob_pl, is_training_pl, use_bn=True, num_label=40)
-    total_loss, classify_loss, mat_diff_loss = get_loss(logits, labels_pl, transform_matrices)
-    batch_acc = get_batch_acc(logits, labels_pl)
+    logits_ts, transform_matrices_ts = get_model(pts_pl, keepprob_pl, is_training_pl, use_bn=True, num_label=40)
+    total_loss_ts, classify_loss_ts, mat_diff_loss_ts = get_loss(logits_ts, labels_pl, transform_matrices_ts)
+    batch_acc = get_batch_acc(logits_ts, labels_pl)
 
-    optim_op = tf.train.AdamOptimizer(learning_rate, name="optim_op").minimize(total_loss, global_step=batch)
+    optim_op = tf.train.AdamOptimizer(learning_rate, name="optim_op").minimize(total_loss_ts, global_step=batch)
     saver = tf.train.Saver(max_to_keep=200)
     merged_summary = tf.summary.merge_all()
 
@@ -102,7 +102,7 @@ def train(train_save_dir, log_file):
                 current_batch_label = current_label[start_idx:end_idx]
                 # display_point(current_batch_data[0], 127 * np.ones_like(current_batch_data[0]))
                 _, step, total_loss_train, classify_loss_train, mat_diff_loss_train, summary_train, logits_train = \
-                    sess.run([optim_op, batch, total_loss, classify_loss, mat_diff_loss, merged_summary, logits],
+                    sess.run([optim_op, batch, total_loss_ts, classify_loss_ts, mat_diff_loss_ts, merged_summary, logits_ts],
                              feed_dict={pts_pl: current_batch_data,
                                         labels_pl: current_batch_label,
                                         is_training_pl: True,
@@ -137,7 +137,7 @@ def train(train_save_dir, log_file):
                 current_batch_data = current_data[start_idx:end_idx]
                 current_batch_label = current_label[start_idx:end_idx]
                 total_loss_val, classify_loss_val, logits_val = \
-                    sess.run([total_loss, classify_loss, logits],
+                    sess.run([total_loss_ts, classify_loss_ts, logits_ts],
                              feed_dict={pts_pl: current_batch_data,
                                         labels_pl: current_batch_label,
                                         is_training_pl: True,
