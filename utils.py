@@ -2,11 +2,6 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import h5py
-import os
-from pyntcloud import PyntCloud
-import pandas as pd
 
 
 def show_all_variables():
