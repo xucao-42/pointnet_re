@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 
 log_file_dict = {"train_results/2018_10_21_21_55/log.txt": "misuse bn during validation",
                  "train_results/2018_10_22_01_16/log.txt": "basic pointnet",
-                 "train_results/2018_10_22_13_32/log.txt": "not use bn before global feature extraction"}
+                 # "train_results/2018_10_22_13_32/log.txt": "not use bn before global feature extraction",
+                 "train_results/2018_10_22_16_53/log.txt": "not use bn before global feature extraction"}
 
 plt.figure()
 for log_dir in log_file_dict.keys():

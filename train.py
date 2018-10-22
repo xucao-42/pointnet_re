@@ -53,7 +53,6 @@ TRAIN_FILES = getDataFiles(
 TEST_FILES = getDataFiles(
     os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048/test_files.txt'))
 
-
 def train(train_save_dir, log_file):
     # directory for saving the intermediate model
     model_dir = os.path.join(train_save_dir, "model")
@@ -65,13 +64,21 @@ def train(train_save_dir, log_file):
     tf.summary.scalar('learning_rate', learning_rate)
 
     pts_pl, labels_pl, is_training_pl, keepprob_pl = get_input_placeholders(BATCH_SIZE, NUM_POINT, 3)
-    logits_ts, transform_matrices_ts = get_model(pts_pl, keepprob_pl, is_training_pl, use_bn=True, num_label=40)
+    logits_ts, transform_matrices_ts = get_model(pts_pl, keepprob_pl, is_training_pl, norm_type="ln", num_label=40)
     total_loss_ts, classify_loss_ts, mat_diff_loss_ts = get_loss(logits_ts, labels_pl, transform_matrices_ts)
     batch_acc = get_batch_acc(logits_ts, labels_pl)
 
-    optim_op = tf.train.AdamOptimizer(learning_rate, name="optim_op").minimize(total_loss_ts, global_step=batch)
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(update_ops):
+        optim_op = tf.train.AdamOptimizer(learning_rate, name="optim_op").minimize(total_loss_ts, global_step=batch)
     saver = tf.train.Saver(max_to_keep=200)
     merged_summary = tf.summary.merge_all()
+
+    # construct tf training dataset
+    data_pl = tf.placeholder(tf.float32, [None, NUM_POINT, 3])
+    label_pl = tf.placeholder(tf.int32, [None, ])
+    training_dataset = tf.data.Dataset.from_tensor_slices((data_pl, label_pl))
+    iterator = training_dataset.make_initializable_iterator()
 
     def train_one_epoch():
         # Shuffle training files to vary the order of training files(hdf5) at each epoch
@@ -82,8 +89,9 @@ def train(train_save_dir, log_file):
             log_string('----' + str(fn) + '-----', log_file)
             current_data, current_label = provider.loadDataFile(TRAIN_FILES[train_file_idxs[fn]])
             current_data = current_data[:, 0:NUM_POINT, :]
-            current_data, current_label, _ = provider.shuffle_data(current_data, np.squeeze(current_label))
+            # current_data, current_label, _ = provider.shuffle_data(current_data, np.squeeze(current_label))
             current_label = np.squeeze(current_label)
+            sess.run(iterator.initializer, feed_dict={data_pl: current_data, label_pl: current_label})
 
             total_num_samples = current_data.shape[0]
             num_batches = total_num_samples // BATCH_SIZE
@@ -160,6 +168,7 @@ def train(train_save_dir, log_file):
     with tf.Session() as sess:
         train_writer = tf.summary.FileWriter(train_dir, sess.graph)  # save model graph
         sess.run(tf.global_variables_initializer())
+
         for i in range(EPOCH):
             log_string('**** EPOCH {:3d} ****'.format(i), log_file)
             train_one_epoch()

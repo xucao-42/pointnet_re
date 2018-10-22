@@ -81,6 +81,20 @@ def jitter_point_cloud(batch_data, sigma=0.01, clip=0.05):
     jittered_data += batch_data
     return jittered_data
 
+
+def jitter_point_cloud_ts(data_ts, sigma=0.01, clip=0.05):
+    """ Randomly jitter points. jittering is per point.
+        Input:
+          BxNx3 array, original batch of point clouds
+        Return:
+          BxNx3 array, jittered batch of point clouds
+    """
+    assert(clip > 0)
+    jittered_data = np.clip(sigma * np.random.randn(data_ts.getshape()), -1*clip, clip)
+    jittered_data += batch_data
+    return jittered_data
+
+
 def getDataFiles(list_filename):
     return [line.rstrip() for line in open(list_filename)]
 

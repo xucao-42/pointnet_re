@@ -10,25 +10,28 @@ def get_input_placeholders(batch_size, num_point, num_feature):
     return pts_pl, labels_pl, is_training_pl, keepprob_pl
 
 
-def input_transform_net(pts, phase, use_bn, k, scope):
+def input_transform_net(pts, is_training_pl, norm_type, scope):
     """
-    :param pts: input point clouds of shape (batch_size, num_pts, 3)
-    :param use_bn: a boolean value indicating whether using bn before activation function or not
-    :param phase: a boolean placeholder of shape () indicating whether its in training phase or testing phase
-    :param k: number of features of a point
+    :param pts: input point clouds of shape (batch_size, num_pts, k)
+    :param is_training_pl: a boolean placeholder of shape () indicating whether its in training phase or testing phase
+    :param norm_type: a string indicating which type of normalization is used.
+                    A string start with "b": use batch norm.
+                    A string starting with "l": use layer norm
+                    others: do not use normalization
     :param scope:
     :return: transform matrix of shape (3,3)
     """
     batch_size = pts.get_shape()[0].value
+    k = pts.get_shape()[-1].value
     mlp_list = [64, 128, 1024]
     global_mlp_list = [512, 256]
     with tf.variable_scope(scope):
         net = pts
         for idx, units in enumerate(mlp_list):
-            net = dense_bn_nonlinear(net, units, use_bn=False, phase=None, scope="fc{}".format(idx + 1))
+            net = dense_norm_nonlinear(net, units, norm_type=norm_type, is_training=is_training_pl,scope="fc{}".format(idx + 1))
         net = tf.reduce_max(net, axis=1, keepdims=False)  # (batch_size, 1024)
         for idx, units in enumerate(global_mlp_list):
-            net = dense_bn_nonlinear(net, units, use_bn=use_bn, phase=phase, scope="global_feature_fc{}".format(idx + 1))
+            net = dense_norm_nonlinear(net, units, norm_type="bn", is_training=is_training_pl, scope="global_feature_fc{}".format(idx + 1))
         
         net = tf.layers.dense(net, units=k*k, activation=None,
                               kernel_initializer=tf.constant_initializer(0.0),
@@ -38,7 +41,7 @@ def input_transform_net(pts, phase, use_bn, k, scope):
     return transform_matrix
 
 
-def get_model(pts, keep_prob, phase, use_bn, num_label):
+def get_model(pts, keep_prob, is_training_pl, norm_type, num_label):
     """
     the classification network. Input is point clouds of shape (batch_size, num_pts, num_features). Output is
     point cloud-wise logits of shape (batch_size, num_classes).
@@ -51,14 +54,16 @@ def get_model(pts, keep_prob, phase, use_bn, num_label):
     :return:
     """
     transform_matrices = []
-    transform_matrix1 = input_transform_net(pts, phase, use_bn, k=3, scope="T_Net1")
+    transform_matrix1 = input_transform_net(pts, is_training_pl, norm_type, scope="T_Net1")
     transform_matrices.append(transform_matrix1)
     pts_transformed = tf.matmul(pts, transform_matrix1, name="transform1")
 
-    net = dense_bn_nonlinear(pts_transformed, 64, use_bn=False, phase=None, scope="fc01")
-    net = dense_bn_nonlinear(net, 64, use_bn=False, phase=None, scope="fc02")
+    net = dense_norm_nonlinear(pts_transformed, 64, norm_type=norm_type,
+                               is_training=is_training_pl, scope="fc01")
+    net = dense_norm_nonlinear(net, 64, norm_type=norm_type,
+                               is_training=is_training_pl, scope="fc02")
 
-    transform_matrix2 = input_transform_net(net, phase, use_bn, k=64, scope="T_Net2")
+    transform_matrix2 = input_transform_net(net, is_training_pl, norm_type, scope="T_Net2")
     transform_matrices.append(transform_matrix2)
     net = tf.matmul(net, transform_matrix2, name="transform2")
 
@@ -66,15 +71,17 @@ def get_model(pts, keep_prob, phase, use_bn, num_label):
     global_mlp_list = [512, 256]
     
     for idx, units in enumerate(mlp_list):
-        net = dense_bn_nonlinear(net, units, use_bn=False, phase=None, scope="fc{}".format(idx + 1))
+        net = dense_norm_nonlinear(net, units, norm_type=norm_type,
+                                   is_training=is_training_pl, scope="fc{}".format(idx + 1))
 
     net = tf.reduce_max(net, axis=1, keepdims=False)  # (batch_size, 1024)
 
     for idx, units in enumerate(global_mlp_list):
-        net = dense_bn_nonlinear(net, units, use_bn=use_bn, phase=phase, scope="global_fc{}".format(idx + 1))
+        net = dense_norm_nonlinear(net, units, norm_type="bn",
+                                   is_training=is_training_pl, scope="global_fc{}".format(idx + 1))
         net = tf.nn.dropout(net, keep_prob, name="dropout{}".format(idx + 1))
 
-    logits = dense_bn_nonlinear(net, num_label, use_bn=False, activation_fn=None, scope="final_fc")
+    logits = dense_norm_nonlinear(net, num_label, norm_type=None, activation_fn=None, scope="final_fc")
 
     return logits, transform_matrices
 
@@ -120,12 +127,13 @@ if __name__ == "__main__":
     num_feature = 3
     num_label = 40
     pts_pl, labels_pl, is_training_pl, dropout_pl = get_input_placeholders(batch_size, num_point, num_feature)
-    logits, transform_matrices = get_model(pts_pl, dropout_pl, is_training_pl, use_bn=True, num_label=40)
+    logits, transform_matrices = get_model(pts_pl, dropout_pl, is_training_pl, norm_type="bn", num_label=40)
     total_loss, classify_loss, mat_diff_loss = get_loss(logits, labels_pl, transform_matrices)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        loss_val = sess.run([total_loss, classify_loss, mat_diff_loss], feed_dict={pts_pl: np.random.randn(batch_size, num_point, num_feature),
-                                                   labels_pl: np.random.randint(num_label, size=(batch_size,)),
-                                                   is_training_pl: True,
-                                                   dropout_pl: 0.7})
+        loss_val = sess.run([total_loss, classify_loss, mat_diff_loss],
+                            feed_dict={pts_pl: np.random.randn(batch_size, num_point, num_feature),
+                                       labels_pl: np.random.randint(num_label, size=(batch_size,)),
+                                       is_training_pl: True,
+                                       dropout_pl: 0.7})
         print(loss_val)  # should be around -log(1/num_label)
