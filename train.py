@@ -140,7 +140,7 @@ def train(train_save_dir, log_file):
                     sess.run([total_loss_ts, classify_loss_ts, logits_ts],
                              feed_dict={pts_pl: current_batch_data,
                                         labels_pl: current_batch_label,
-                                        is_training_pl: True,
+                                        is_training_pl: False,
                                         keepprob_pl: 1.0})
                 pred_val = np.argmax(logits_val, 1)
                 total_correct += np.sum(pred_val == current_batch_label)

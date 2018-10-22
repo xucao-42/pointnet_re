@@ -25,7 +25,7 @@ def input_transform_net(pts, phase, use_bn, k, scope):
     with tf.variable_scope(scope):
         net = pts
         for idx, units in enumerate(mlp_list):
-            net = dense_bn_nonlinear(net, units, use_bn=use_bn, phase=phase, scope="fc{}".format(idx + 1))
+            net = dense_bn_nonlinear(net, units, use_bn=False, phase=None, scope="fc{}".format(idx + 1))
         net = tf.reduce_max(net, axis=1, keepdims=False)  # (batch_size, 1024)
         for idx, units in enumerate(global_mlp_list):
             net = dense_bn_nonlinear(net, units, use_bn=use_bn, phase=phase, scope="global_feature_fc{}".format(idx + 1))
@@ -55,8 +55,8 @@ def get_model(pts, keep_prob, phase, use_bn, num_label):
     transform_matrices.append(transform_matrix1)
     pts_transformed = tf.matmul(pts, transform_matrix1, name="transform1")
 
-    net = dense_bn_nonlinear(pts_transformed, 64, use_bn=use_bn, phase=phase, scope="fc01")
-    net = dense_bn_nonlinear(net, 64, use_bn=use_bn, phase=phase, scope="fc02")
+    net = dense_bn_nonlinear(pts_transformed, 64, use_bn=False, phase=None, scope="fc01")
+    net = dense_bn_nonlinear(net, 64, use_bn=False, phase=None, scope="fc02")
 
     transform_matrix2 = input_transform_net(net, phase, use_bn, k=64, scope="T_Net2")
     transform_matrices.append(transform_matrix2)
@@ -66,7 +66,7 @@ def get_model(pts, keep_prob, phase, use_bn, num_label):
     global_mlp_list = [512, 256]
     
     for idx, units in enumerate(mlp_list):
-        net = dense_bn_nonlinear(net, units, use_bn=use_bn, phase=phase, scope="fc{}".format(idx + 1))
+        net = dense_bn_nonlinear(net, units, use_bn=False, phase=None, scope="fc{}".format(idx + 1))
 
     net = tf.reduce_max(net, axis=1, keepdims=False)  # (batch_size, 1024)
 
@@ -128,4 +128,4 @@ if __name__ == "__main__":
                                                    labels_pl: np.random.randint(num_label, size=(batch_size,)),
                                                    is_training_pl: True,
                                                    dropout_pl: 0.7})
-        print(loss_val)
+        print(loss_val)  # should be around -log(1/num_label)
