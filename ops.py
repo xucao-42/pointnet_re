@@ -20,10 +20,10 @@ class BatchNorm(object):
 
 
 def dense_norm_nonlinear(inputs, units,
-                       norm_type=None,
-                       is_training=None,
-                       activation_fn=tf.nn.relu,
-                       scope="fc"):
+                         norm_type=None,
+                         is_training=None,
+                         activation_fn=tf.nn.relu,
+                        scope="fc"):
     """
 
     :param inputs: tensor of shape (batch_size, ...,n) from last layer
@@ -42,7 +42,6 @@ def dense_norm_nonlinear(inputs, units,
         out = tf.layers.dense(inputs, units,
                               kernel_initializer=tf.truncated_normal_initializer(stddev=0.02))
         #  batch_size, num_point, num_features
-        tf.contrib.layers.layer_norm(out, )
         if norm_type is not None:
             if norm_type.lower().startswith("b"):
                 batch_norm = BatchNorm()

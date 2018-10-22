@@ -24,7 +24,7 @@ EPOCH = config["hyperparameters"].getint("epoch")
 BASE_LEARNING_RATE = config["hyperparameters"].getfloat("lr")
 DECAY_STEP = config["hyperparameters"].getint("lr_decay_step")
 DECAY_RATE = config["hyperparameters"].getfloat("lr_decay_rate")
-
+NORM_TYPE = config["hyperparameters"].getstring("norm_type")
 
 def log_string(out_str, log_fout):
     log_fout.write(out_str+'\n')
@@ -59,12 +59,14 @@ def train(train_save_dir, log_file):
     if not os.path.exists(model_dir):
         os.mkdir(model_dir)
 
+    # learning rate decay
     batch = tf.Variable(0)
     learning_rate = get_learning_rate(batch)
     tf.summary.scalar('learning_rate', learning_rate)
 
+    # get model and loss
     pts_pl, labels_pl, is_training_pl, keepprob_pl = get_input_placeholders(BATCH_SIZE, NUM_POINT, 3)
-    logits_ts, transform_matrices_ts = get_model(pts_pl, keepprob_pl, is_training_pl, norm_type="ln", num_label=40)
+    logits_ts, transform_matrices_ts = get_model(pts_pl, keepprob_pl, is_training_pl, norm_type=NORM_TYPE, num_label=40)
     total_loss_ts, classify_loss_ts, mat_diff_loss_ts = get_loss(logits_ts, labels_pl, transform_matrices_ts)
     batch_acc = get_batch_acc(logits_ts, labels_pl)
 
