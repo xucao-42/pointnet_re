@@ -50,6 +50,8 @@ def dense_norm_nonlinear(inputs, units,
                 out = batch_norm(out, is_training=is_training)
             elif norm_type.lower().startswith("l"):
                 out = tf.contrib.layers.layer_norm(out, scope="layer_norm")
+            elif norm_type.lower().startswith("i"):
+                out = tf.contrib.layers.instance_norm(out, scope="instance_norm")
             else:
                 raise ValueError("please give the right norm type beginning with 'b' or 'l'!")
         if activation_fn is not None:

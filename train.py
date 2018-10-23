@@ -24,7 +24,7 @@ EPOCH = config["hyperparameters"].getint("epoch")
 BASE_LEARNING_RATE = config["hyperparameters"].getfloat("lr")
 DECAY_STEP = config["hyperparameters"].getint("lr_decay_step")
 DECAY_RATE = config["hyperparameters"].getfloat("lr_decay_rate")
-NORM_TYPE = config["hyperparameters"].getstring("norm_type")
+NORM_TYPE = config["hyperparameters"]["norm_type"]
 
 def log_string(out_str, log_fout):
     log_fout.write(out_str+'\n')
@@ -76,11 +76,11 @@ def train(train_save_dir, log_file):
     saver = tf.train.Saver(max_to_keep=200)
     merged_summary = tf.summary.merge_all()
 
-    # construct tf training dataset
-    data_pl = tf.placeholder(tf.float32, [None, NUM_POINT, 3])
-    label_pl = tf.placeholder(tf.int32, [None, ])
-    training_dataset = tf.data.Dataset.from_tensor_slices((data_pl, label_pl))
-    iterator = training_dataset.make_initializable_iterator()
+    # # construct tf training dataset
+    # data_pl = tf.placeholder(tf.float32, [None, NUM_POINT, 3])
+    # label_pl = tf.placeholder(tf.int32, [None, ])
+    # training_dataset = tf.data.Dataset.from_tensor_slices((data_pl, label_pl))
+    # iterator = training_dataset.make_initializable_iterator()
 
     def train_one_epoch():
         # Shuffle training files to vary the order of training files(hdf5) at each epoch
@@ -91,9 +91,9 @@ def train(train_save_dir, log_file):
             log_string('----' + str(fn) + '-----', log_file)
             current_data, current_label = provider.loadDataFile(TRAIN_FILES[train_file_idxs[fn]])
             current_data = current_data[:, 0:NUM_POINT, :]
-            # current_data, current_label, _ = provider.shuffle_data(current_data, np.squeeze(current_label))
+            current_data, current_label, _ = provider.shuffle_data(current_data, np.squeeze(current_label))
             current_label = np.squeeze(current_label)
-            sess.run(iterator.initializer, feed_dict={data_pl: current_data, label_pl: current_label})
+            #sess.run(iterator.initializer, feed_dict={data_pl: current_data, label_pl: current_label})
 
             total_num_samples = current_data.shape[0]
             num_batches = total_num_samples // BATCH_SIZE

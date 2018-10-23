@@ -127,7 +127,7 @@ if __name__ == "__main__":
     num_feature = 3
     num_label = 40
     pts_pl, labels_pl, is_training_pl, dropout_pl = get_input_placeholders(batch_size, num_point, num_feature)
-    logits, transform_matrices = get_model(pts_pl, dropout_pl, is_training_pl, norm_type="bn", num_label=40)
+    logits, transform_matrices = get_model(pts_pl, dropout_pl, is_training_pl, norm_type="ln", num_label=40)
     total_loss, classify_loss, mat_diff_loss = get_loss(logits, labels_pl, transform_matrices)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
