@@ -1,5 +1,5 @@
 ## Introduction
-This is a tensorflow implementation of [pointnet](https://arxiv.org/abs/1612.00593) based on the [official implementation](https://github.com/charlesq34/pointnet). Main difference is the thorough replacement of conv2d operations by tf.layer.dense.
+This is a tensorflow implementation of [pointnet](https://arxiv.org/abs/1612.00593) based on the [official implementation](https://github.com/charlesq34/pointnet). Main difference is the thorough replacement of conv2d operations by tf.layers.dense.
 
 ## Usage
 To train the classification model:
